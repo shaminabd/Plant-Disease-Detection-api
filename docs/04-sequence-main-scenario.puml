@@ -1,0 +1,65 @@
+@startuml
+title Diagram 4. Main scenario: photo, diagnosis, advice, history
+skinparam dpi 130
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam sequenceMessageAlign left
+autonumber
+
+actor "Registered user" as U
+participant "React PWA" as W
+participant "API layer" as A
+participant "Diagnosis module" as D
+database "MinIO" as S
+participant "Recommendation module" as R
+participant "Language model\nservice" as L
+database "PostgreSQL\n+ pgvector" as P
+
+U -> W : choose photo, press Scan
+W -> A : POST /api/v1/diagnose (photo, token)
+A -> A : check token (FR-02)
+A -> D : image checks (FR-05, FR-10)
+alt image invalid
+  D --> A : rejected, reason
+  A --> W : 422 + message
+  W --> U : "photo is not valid: ..."
+else image valid
+  A -> S : save photo (FR-12)
+  D -> D : classify with ONNX Runtime (FR-06)
+  alt confidence < T or not a leaf (FR-08, FR-09)
+    D --> A : status "retake" + candidates
+    A -> P : save diagnosis with status "retake"
+    A --> W : 200, status "retake"
+    W --> U : ask for a new photo
+  else accepted
+    D -> D : Grad-CAM heatmap with PyTorch (FR-11)
+    D --> A : top 3, confidence, heatmap
+    A -> S : save heatmap (FR-12)
+    A -> P : save diagnosis (FR-23)
+    A --> W : 200, status "ok", diagnosis_id
+    W --> U : result: top 3, confidence, heatmap
+    U -> W : open Recommendations
+    W -> A : POST /api/v1/recommend (diagnosis_id, language)
+    A -> R : crop, disease, language
+    R -> P : vector search for passages (FR-14)
+    alt passages found
+      R -> L : crop, disease, passages, language (text only)
+      alt service available
+        L --> R : advice text
+      else service not available (FR-22)
+        R -> R : use baseline lookup table
+      end
+      R --> A : advice items with references (FR-15)
+    else no relevant passage
+      R --> A : "no verified advice" (FR-16)
+    end
+    A -> P : save advice with the diagnosis (FR-23)
+    A --> W : 200, advice + sources + disclaimer (FR-17)
+    W --> U : advice with links to sources
+  end
+end
+U -> W : open History
+W -> A : GET /api/v1/history
+A -> P : entries of the current user (FR-24, FR-25)
+A --> W : list
+@enduml

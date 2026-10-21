@@ -1,0 +1,29 @@
+@startuml
+title Diagram 1. System context: Plant Disease AI
+skinparam dpi 130
+skinparam shadowing false
+skinparam defaultFontSize 12
+left to right direction
+
+database "Datasets (offline)\nPlantVillage, PlantDoc,\nown field photos" as D #FFFDE7
+database "Knowledge sources (offline)\nextension guides, articles,\nofficial recommendations" as K #FFFDE7
+actor "Team / maintainer" as T
+rectangle "<b>Plant Disease AI</b>\n\nWeb application (PWA) and REST API:\ndiagnosis from a leaf photo,\nadvice with sources, history" as S #E3F2FD
+actor "Registered user\n(grower, gardener,\nstudent, agronomist)" as U
+cloud "Language model service\n(external API)" as L #FFFDE7
+
+D ..> T : training and\ntest data
+K ..> T : documents\nto index
+T ..> S : trained model (ONNX),\nindexed knowledge base,\ndeployment
+
+U --> S : leaf photo, language,\nlogin / registration
+S --> U : diagnosis (top 3, confidence),\nheatmap, advice with sources,\nhistory
+S --> L : text only: crop, disease,\nretrieved passages, language
+L --> S : advice text
+
+note bottom of S
+  A visitor (not logged in) can only
+  register or log in. There is no
+  administrator role in this version.
+end note
+@enduml

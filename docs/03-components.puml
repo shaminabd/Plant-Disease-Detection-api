@@ -1,0 +1,71 @@
+@startuml
+title Diagram 3. Component diagram (draft)
+skinparam dpi 130
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam ArrowFontSize 11
+skinparam componentStyle uml2
+skinparam package {
+  BorderColor #555555
+}
+
+package "Client (browser / PWA)" as CL {
+  [React PWA\nscreens: login, scan, result,\nrecommendations, history\ni18n: kk / ru / en] as PWA #F5F5F5
+}
+
+package "Backend: one FastAPI application (Docker)" as BE {
+  [API layer\nrouters /api/v1, validation,\nOpenAPI, auth check] as API #FFE0B2
+
+  package "Diagnosis module (Shynggys)" #E3F2FD {
+    [Image checks\nformat, size, resolution,\nblur / darkness] as CHK #BBDEFB
+    [Classifier\nONNX Runtime] as CLS #BBDEFB
+    [Rejection rules\nlow confidence,\nnot a leaf] as REJ #BBDEFB
+    [Explainer\nGrad-CAM (PyTorch)] as CAM #BBDEFB
+  }
+
+  package "Recommendation module (Mukhammedali)" #E8F5E9 {
+    [Retriever\nvector search] as RET #C8E6C9
+    [Generator\nprompt, citations,\nno-source answer] as GEN #C8E6C9
+    [Baseline lookup\ndisease to fixed advice] as BAS #C8E6C9
+  }
+
+  package "Platform (Alikhan)" #FFF3E0 {
+    [Auth\nregistration, login,\ntokens] as AUTH #FFE0B2
+    [History service] as HIS #FFE0B2
+    [Data access\nSQLAlchemy, Alembic] as DAO #FFE0B2
+    [Photo storage adapter\nS3 API] as STO #FFE0B2
+  }
+}
+
+database "PostgreSQL + pgvector\nusers, diagnoses, advice,\nsources, passages" as DB
+database "MinIO\nphotos, heatmaps" as FS
+cloud "Language model\nservice (external)" as LLM
+
+package "Offline tools (team)" as OFF {
+  [ML pipeline\nsplit, training, evaluation,\nONNX export] as ML #F5F5F5
+  [Knowledge base indexer\nchunking, embeddings] as IDX #F5F5F5
+}
+file "model.onnx\nweights .pt" as MOD
+
+PWA --> API : HTTPS, JSON\nmultipart photo
+API --> AUTH
+API --> CHK
+API --> GEN
+API --> HIS
+CHK --> CLS
+CLS --> REJ
+REJ --> CAM
+GEN --> RET
+GEN --> BAS : fallback
+GEN --> LLM : text only
+RET --> DB : similarity search
+HIS --> DAO
+AUTH --> DAO
+DAO --> DB
+API --> STO
+STO --> FS
+ML --> MOD
+MOD ..> CLS : loaded at start
+MOD ..> CAM
+IDX --> DB : passages,\nembeddings
+@enduml

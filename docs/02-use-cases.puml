@@ -1,0 +1,54 @@
+@startuml
+title Diagram 2. Use cases (requirement IDs in brackets)
+skinparam dpi 130
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam usecase {
+  BackgroundColor #FFFDE7
+  BorderColor #8D6E00
+}
+left to right direction
+
+actor "Visitor" as V
+actor "Registered user" as U
+actor "Team / maintainer" as T
+actor "Language model\nservice" as L
+
+rectangle "Plant Disease AI" {
+  usecase "UC-01 Register\n(FR-01)" as UC1
+  usecase "UC-02 Log in / log out\n(FR-02)" as UC2
+  usecase "UC-03 Choose language\n(FR-03)" as UC3
+  usecase "UC-04 Scan leaf photo\n(FR-04, FR-12, FR-28)" as UC4
+  usecase "UC-05 Check image\n(FR-05, FR-09, FR-10)" as UC5
+  usecase "UC-06 Get diagnosis:\ntop 3 and confidence\n(FR-06, FR-07)" as UC6
+  usecase "UC-07 Retake request\n(FR-08, FR-09, FR-10)" as UC7
+  usecase "UC-08 View heatmap\n(FR-11)" as UC8
+  usecase "UC-09 Get advice\nwith sources\n(FR-13 to FR-20)" as UC9
+  usecase "UC-10 Retrieve passages\nand write advice\n(FR-14 to FR-16, FR-21, FR-22)" as UC10
+  usecase "UC-11 View history\n(FR-23, FR-24, FR-25)" as UC11
+  usecase "UC-12 Delete history entry\n(FR-26)" as UC12
+  usecase "UC-13 Rate diagnosis\n(FR-27, Could)" as UC13
+  usecase "UC-14 Build knowledge base\n(FR-34 to FR-37)" as UC14
+  usecase "UC-15 Train and evaluate models\nand advice quality\n(DR-01 to DR-11)" as UC15
+}
+
+V --> UC1
+V --> UC2
+U --> UC2
+U --> UC3
+U --> UC4
+U --> UC9
+U --> UC11
+T --> UC14
+T --> UC15
+UC10 --> L
+
+UC4 ..> UC5 : <<include>>
+UC4 ..> UC6 : <<include>>
+UC6 ..> UC8 : <<include>>
+UC7 .up.> UC6 : <<extend>>\nlow confidence,\nnot a leaf
+UC9 ..> UC10 : <<include>>
+UC9 .up.> UC6 : <<extend>>\nafter an accepted\ndiagnosis
+UC12 .up.> UC11 : <<extend>>
+UC13 .up.> UC6 : <<extend>>
+@enduml
