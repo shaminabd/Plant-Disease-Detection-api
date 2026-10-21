@@ -1,0 +1,102 @@
+@startuml
+title Diagram 5. Data model (PostgreSQL)
+skinparam dpi 130
+skinparam shadowing false
+skinparam defaultFontSize 12
+hide circle
+skinparam linetype ortho
+
+entity "users" as users {
+  * id : uuid <<PK>>
+  --
+  * email : text <<unique>>
+  * password_hash : text
+  * language : text (kk / ru / en)
+  * created_at : timestamp
+}
+
+entity "diagnoses" as diagnoses {
+  * id : uuid <<PK>>
+  --
+  * user_id : uuid <<FK>>
+  * photo_key : text (MinIO object)
+  heatmap_key : text (MinIO object)
+  * status : text (ok / retake)
+  retake_reason : text
+  top3 : jsonb (class, confidence)
+  top1_crop : text
+  top1_disease : text
+  model_version : text
+  processing_ms : integer
+  * created_at : timestamp
+}
+
+entity "advice" as advice {
+  * id : uuid <<PK>>
+  --
+  * diagnosis_id : uuid <<FK>>
+  * language : text
+  * mode : text (rag / baseline / none)
+  text : text
+  * created_at : timestamp
+}
+
+entity "advice_references" as refs {
+  * advice_id : uuid <<FK>>
+  * passage_id : uuid <<FK>>
+  --
+  item_no : integer
+}
+
+entity "sources" as sources {
+  * id : uuid <<PK>>
+  --
+  * title : text
+  * url : text
+  type : text
+  language : text
+  licence_note : text
+}
+
+entity "passages" as passages {
+  * id : uuid <<PK>>
+  --
+  * source_id : uuid <<FK>>
+  * text : text
+  * language : text
+  crop : text
+  disease : text
+  * embedding : vector
+}
+
+entity "baseline_advice" as baseline {
+  * id : uuid <<PK>>
+  --
+  * disease_class : text
+  * language : text
+  * text : text
+  * source_id : uuid <<FK>>
+}
+
+entity "feedback" as feedback {
+  * id : uuid <<PK>>
+  --
+  * diagnosis_id : uuid <<FK>>
+  * helpful : boolean
+  * created_at : timestamp
+}
+
+users ||--o{ diagnoses
+diagnoses ||--o{ advice
+advice ||--o{ refs
+passages ||--o{ refs
+sources ||--o{ passages
+sources ||--o{ baseline
+diagnoses ||--o{ feedback
+
+note bottom of diagnoses
+  Photos and heatmaps are not stored in the
+  database, only the keys of the MinIO objects.
+  Deleting a diagnosis also deletes both objects (FR-26).
+end note
+@enduml
